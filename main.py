@@ -1,8 +1,13 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 
-from models.models import create_db_and_tables, SessionDep, seed_database
-
+from extractor import process_skin_folder, process_character_directory,get_script_dir
+from models.models import create_db_and_tables, SessionDep, seed_database,getApiVersion
+from skin_file_fetcher import download_skin
+script_dir = get_script_dir()
+api_version = getApiVersion()[:-2]
 app = FastAPI()
 
 
@@ -17,10 +22,17 @@ async def root():
 
 @app.get("/skin/{champId}/{skinId}")
 async def get_skin(champId: str,skinId:str):
-    file_path = "cdn/22/76.wad.client"
+
+    if os.path.exists(f"cdn/{champId}/{skinId}.wad.client"):
+        file_path = f"cdn/{champId}/{skinId}.wad.client"
+    else:
+        download_skin(champId, skinId)
+        process_character_directory(
+            script_dir, champId, skinId, api_version
+        )
     return FileResponse(
         path=file_path,
-        filename="76.wad.client",  # name user sees when saving
+        filename=f"{skinId}.wad.client",  # name user sees when saving
         media_type='application/octet-stream'  # generic binary type
     )
 @app.get("party/accessToken/{rooomId}")
