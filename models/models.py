@@ -1,7 +1,8 @@
 import json
 from datetime import datetime
 from typing import Annotated,Dict,Optional
-
+import logging
+logger = logging.getLogger(__name__)
 import requests
 from fastapi import Depends, FastAPI, HTTPException, Query
 from sqlmodel import Field, Session, SQLModel, create_engine, select,Relationship
@@ -83,7 +84,6 @@ def seed_database():
                     champion=champ
                 )
                 db.merge(skin_obj)
-        print("seeding in propgress ........")
         db.commit()
-        print("Database seeded successfully!")
+        logger.info("Database seeded successfully!")
 

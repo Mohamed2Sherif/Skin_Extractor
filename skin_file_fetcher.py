@@ -1,5 +1,6 @@
 import os.path
-
+import logging
+logger = logging.getLogger(__name__)
 from bs4 import BeautifulSoup
 from models.models import getApiVersion, Champion, engine
 from sqlmodel import select, Session
@@ -45,9 +46,9 @@ def write_to_disk(skin_url:str,skin_dir:str):
             f.write(response.content)
 
     except requests.exceptions.RequestException as e:
-        print(f"Failed to fetch skin data: {str(e)}")
+        logger.error(f"Failed to fetch skin data: {str(e)}")
     except IOError as e:
-        print(f"Failed to save file: {str(e)}")
+        logger.error(f"Failed to save file: {str(e)}")
 def save_skin_to_disk(champ_id: str, skin_num: str, api_version: str, champ_dir: str) -> None:
     """Download and save skin file to organized directory structure"""
     # Create base directory if it doesn't exist
@@ -59,12 +60,12 @@ def save_skin_to_disk(champ_id: str, skin_num: str, api_version: str, champ_dir:
     base_skin_url= f"https://raw.communitydragon.org/{api_version}/game/data/characters/{champ_dir}/skins/skin0.bin"
     save_path = skin_dir / f"skin{skin_num}.bin"
 
-    print(f"Attempting to fetch skin data from: {skin_url}")
-    print(f"Saving to: {save_path}")
+    logger.info(f"Attempting to fetch skin data from: {skin_url}")
+    logger.info(f"Saving to: {save_path}")
     if not os.path.exists(f"{skin_dir}/skin0.bin"):
         write_to_disk(base_skin_url,f"{skin_dir}/skin0.bin")
     write_to_disk(skin_url,save_path)
-    print(f"Successfully saved skin {skin_num} for champion {champ_id}")
+    logger.info(f"Successfully saved skin {skin_num} for champion {champ_id}")
 
 # Modified version of your function
 def get_skin_file(champ_key: str, skin_num: str, db: Session) -> None:
@@ -75,13 +76,13 @@ def get_skin_file(champ_key: str, skin_num: str, db: Session) -> None:
     ).first()
 
     if not champ:
-        print(f"No champion found with ID {champ_key}")
+        logger.error(f"No champion found with ID {champ_key}")
         return
 
     # Get API version and adjust format
     api_version = getApiVersion()
     if not api_version:
-        print("Could not retrieve API version")
+        logger.error("Could not retrieve API version")
         return
 
     api_version = api_version[0:-2]  # Remove patch suffix if needed
@@ -91,9 +92,8 @@ def get_skin_file(champ_key: str, skin_num: str, db: Session) -> None:
 
     # Find matching champion directory (case-insensitive)
     champ_dirictories =[ d for d in character_dirs if champ.champ_code.lower() in d.lower()]
-    print(champ_dirictories)
     if not champ_dirictories:
-        print(f"No directory found for champion {champ.champ_code}")
+        logger.error(f"No directory found for champion {champ.champ_code}")
         return
 
     # Save the skin file

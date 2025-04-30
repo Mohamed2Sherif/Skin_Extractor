@@ -1,5 +1,8 @@
+import logging
 import os
 import subprocess
+logger = logging.getLogger(__name__)
+
 import json
 import shutil
 from sys import api_version
@@ -31,7 +34,7 @@ def run_ritobin(scriptdir: str, filename: str, output_extension: str) -> None:
             text=True,
         )
     except subprocess.CalledProcessError as e:
-        print(f"Error running ritobin: {e}")
+        logger.error(f"Error running ritobin: {e}")
         raise
 
 
@@ -41,7 +44,7 @@ def read_json_file(filename: str) -> Dict[str, Any]:
         with open(f"{filename}.json", "r") as file:
             return json.load(file)
     except (FileNotFoundError, json.JSONDecodeError) as e:
-        print(f"Error reading JSON file: {e}")
+        logger.error(f"Error reading JSON file: {e}")
         raise
 
 
@@ -74,7 +77,7 @@ def process_skin_folder(scriptdir: str, championkey: str, folder_path: str, skin
             run_ritobin(scriptdir, f"skin{base_skin}.bin", "json")
             shutil.copy(f"skin{base_skin}.json", "skinbase.json")
         except subprocess.CalledProcessError as e:
-            print(f"Error processing base skin: {e}")
+            logger.error(f"Error processing base skin: {e}")
             return
     # Load base data
     base_data = (
@@ -87,7 +90,7 @@ def process_skin_folder(scriptdir: str, championkey: str, folder_path: str, skin
     original_skin_number = skin_number
 
     try:
-        print(f"Processing {os.path.basename(os.getcwd())}/{skin_number}...")
+        logger.info(f"Processing {os.path.basename(os.getcwd())}/{skin_number}...")
         if os.path.exists(f"skin{skin_number}.bin"):
             run_ritobin(scriptdir, f"skin{skin_number}.bin", "json")
 
@@ -123,14 +126,14 @@ def process_skin_folder(scriptdir: str, championkey: str, folder_path: str, skin
             json.JSONDecodeError,
             subprocess.CalledProcessError,
     ) as e:
-        print(f"Error processing {skin_number}: {e}")
+        logger.error(f"Error processing {skin_number}: {e}")
 
 
 def process_character_directory(scriptdir: str, champion_key: str, skin_number: str, apiVersion: str) -> None:
     """Process a character directory containing skin and animation folders."""
     char_dir = f"{scriptdir}/base_skinsfiles/{apiVersion}/{champion_key}"
     if not os.path.exists(char_dir):
-        print("Path does not exist!")
+        logger.error("Path does not exist!")
     os.chdir(char_dir)
     for folder in os.listdir():
         folder_path = os.path.join(char_dir, folder)
@@ -162,7 +165,7 @@ def write_modified_skin_to_output_dir(scriptdir: str, champ_key: str, champ_name
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         if not os.path.exists(os.path.join(cwd, f"skin0.bin")):
-            print(f"Error: Could not find skin0.bin in {cwd}")
+            logger.error(f"Error: Could not find skin0.bin in {cwd}")
             return
         if not os.path.exists(os.path.join(output_dir, f"skin0.bin")):
             shutil.copy(
@@ -175,7 +178,7 @@ def write_modified_skin_to_output_dir(scriptdir: str, champ_key: str, champ_name
         write_to_server_cdn(scriptdir, archive_source, champ_key, skin_num)
         return
     except Exception as error:
-        print(error)
+        logger.error(error)
 
 
 def write_to_server_cdn(base_dir: str, dir: str, champKey: str, skinNum: str):
@@ -187,9 +190,3 @@ def write_to_server_cdn(base_dir: str, dir: str, champKey: str, skinNum: str):
         output + ".wad.client"
     ])
 
-
-script_dir = get_script_dir()
-download_skin("22", "76")
-process_character_directory(
-    script_dir, "22", "76", api_version
-)
