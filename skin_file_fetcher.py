@@ -1,3 +1,5 @@
+import os.path
+
 from bs4 import BeautifulSoup
 from models.models import getApiVersion, Champion, engine
 from sqlmodel import select, Session
@@ -59,7 +61,8 @@ def save_skin_to_disk(champ_id: str, skin_num: str, api_version: str, champ_dir:
 
     print(f"Attempting to fetch skin data from: {skin_url}")
     print(f"Saving to: {save_path}")
-    write_to_disk(base_skin_url,f"{skin_dir}/skin0.bin")
+    if not os.path.exists(f"{skin_dir}/skin0.bin"):
+        write_to_disk(base_skin_url,f"{skin_dir}/skin0.bin")
     write_to_disk(skin_url,save_path)
     print(f"Successfully saved skin {skin_num} for champion {champ_id}")
 

@@ -1,0 +1,6 @@
+.idea/
+.venv/
+__pycache__/
+cdn/
+output/
+base_skinsfiles/
