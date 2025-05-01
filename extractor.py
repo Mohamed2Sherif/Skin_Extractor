@@ -2,14 +2,13 @@ import logging
 import os
 import subprocess
 logger = logging.getLogger(__name__)
-
 import json
 import shutil
 from sys import api_version
 from typing import Dict, Any, Optional, List
 from models.models import getApiVersion
-from skin_file_fetcher import download_skin
-
+from dotenv import load_dotenv
+load_dotenv("./.env")
 api_version = getApiVersion()
 api_version = api_version[:-2]
 
@@ -18,26 +17,25 @@ def get_script_dir():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     return script_dir
 
+def executer()-> str:
+    if os.environ.get("Environment") == "Development":
+        return ""
+    else:
+        return "wine"
 
-def run_ritobin(scriptdir: str, filename: str, output_extension: str) -> None:
-    """Run the ritobin executable to convert files."""
+
+def run_ritobin(scriptdir: str, filename: str, output_extension: str):
     try:
-        subprocess.run(
-            [
-                "wine",
-                os.path.join(scriptdir, "ritobin.exe"),
-                filename,
-                "-o",
-                output_extension,
-            ],
-            check=True,
-            text=True,
-        )
+        cmd = [os.path.join(scriptdir, "ritobin.exe"), filename, "-o", output_extension]
+
+        exe = executer()
+        if exe:
+            cmd.insert(0, exe)
+        print(cmd)
+        subprocess.run(cmd, check=True, text=True)
     except subprocess.CalledProcessError as e:
         logger.error(f"Error running ritobin: {e}")
         raise
-
-
 def read_json_file(filename: str) -> Dict[str, Any]:
     """Read and parse a JSON file."""
     try:
@@ -182,11 +180,17 @@ def write_modified_skin_to_output_dir(scriptdir: str, champ_key: str, champ_name
 
 
 def write_to_server_cdn(base_dir: str, dir: str, champKey: str, skinNum: str):
-    output = f"{base_dir}/cdn/{champKey}/{skinNum}"
-    subprocess.run([
-        "wine",
-        os.path.join(base_dir, "wad-make.exe"),
-        dir,
-        output + ".wad.client"
-    ])
+    output_path = os.path.join(base_dir, "cdn", champKey, skinNum)
+    wadmake_path = os.path.join(base_dir, "wad-make.exe")
+    output_file = f"{output_path}.wad.client"
 
+    cmd = [wadmake_path, dir, output_file]
+    exe = executer()
+    if exe:
+        cmd.insert(0, exe)
+    print(cmd)
+    try:
+        subprocess.run(cmd, check=True, text=True)
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Error running wad-make: {e}")
+        raise

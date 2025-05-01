@@ -7,7 +7,6 @@ from fastapi.responses import FileResponse
 from extractor import process_skin_folder, process_character_directory,get_script_dir
 from models.models import create_db_and_tables, SessionDep, seed_database,getApiVersion
 from skin_file_fetcher import download_skin
-
 app = FastAPI()
 
 

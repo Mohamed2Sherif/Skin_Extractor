@@ -89,7 +89,7 @@ def get_skin_file(champ_key: str, skin_num: str, db: Session) -> None:
 
     # Get filtered character directories
     character_dirs = get_filtered_community_dragon_links(api_version)
-
+    logger.info(len(character_dirs))
     # Find matching champion directory (case-insensitive)
     champ_dirictories =[ d for d in character_dirs if champ.champ_code.lower() in d.lower()]
     if not champ_dirictories:
