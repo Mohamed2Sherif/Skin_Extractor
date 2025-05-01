@@ -8,3 +8,4 @@ Dockerfile
 .gitignore
 test_main.http
 mistrShifo.db
+.env

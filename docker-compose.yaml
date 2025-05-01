@@ -5,4 +5,11 @@ services:
     image: test_image
     ports:
       - "8000:8000"
+    configs:
+      - source: envfile
+        target: /app/.env
     restart: on-failure
+
+configs:
+  envfile:
+    file: ./.env.production
