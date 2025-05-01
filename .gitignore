@@ -4,3 +4,4 @@ __pycache__/
 cdn/
 output/
 base_skinsfiles/
+.env

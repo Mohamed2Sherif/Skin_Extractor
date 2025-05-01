@@ -35,7 +35,7 @@ def get_filtered_community_dragon_links(api_version: str) -> List[str]:
 
 
 
-def write_to_disk(skin_url:str,skin_dir:str):
+def write_to_disk(skin_url:str,skin_dir:str,skinNum:str):
     try:
         # Download the skin file
         response = requests.get(skin_url)
@@ -46,7 +46,10 @@ def write_to_disk(skin_url:str,skin_dir:str):
             f.write(response.content)
 
     except requests.exceptions.RequestException as e:
-        logger.error(f"Failed to fetch skin data: {str(e)}")
+        try :
+            write_to_disk(skin_url.replace(f"skin{skinNum}","skin0"),skin_dir,skinNum)
+        except :
+            logger.error(f"Failed to fetch skin data: {str(e)}")
     except IOError as e:
         logger.error(f"Failed to save file: {str(e)}")
 def save_skin_to_disk(champ_id: str, skin_num: str, api_version: str, champ_dir: str) -> None:
@@ -63,8 +66,8 @@ def save_skin_to_disk(champ_id: str, skin_num: str, api_version: str, champ_dir:
     logger.info(f"Attempting to fetch skin data from: {skin_url}")
     logger.info(f"Saving to: {save_path}")
     if not os.path.exists(f"{skin_dir}/skin0.bin"):
-        write_to_disk(base_skin_url,f"{skin_dir}/skin0.bin")
-    write_to_disk(skin_url,save_path)
+        write_to_disk(base_skin_url,f"{skin_dir}/skin0.bin",skin_num)
+    write_to_disk(skin_url,save_path,skin_num)
     logger.info(f"Successfully saved skin {skin_num} for champion {champ_id}")
 
 # Modified version of your function
