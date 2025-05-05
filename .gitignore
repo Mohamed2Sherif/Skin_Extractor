@@ -1,0 +1,12 @@
+.idea/
+.venv/
+__pycache__/
+cdn/
+output/
+base_skinsfiles/
+.env
+.env.production
+.idea/
+hashes.game.txt
+test_main.http
+cache.bin
