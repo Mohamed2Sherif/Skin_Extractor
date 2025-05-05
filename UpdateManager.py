@@ -49,15 +49,21 @@ class UpdateManager:
             # Check if at least one skin is unprocessed
             unprocessed_skins = [
                 skin for skin in champ.skins
-                if f"{champ.id}_{skin.id}" not in map.keys() or map[f"{champ.id}_{skin.id}"][0]!=self.apiVersion and skin.id!="0"
+                if skin.id != "0" and (
+                        (entry := map.get(f"{champ.id}_{skin.id}")) is None or entry[0] != self.apiVersion
+                )
             ]
 
+            limit=1
             if unprocessed_skins:
                 # Process all skins for this champion
                 for skin in unprocessed_skins:
-                    download_skin(champ.id, skin.id)
-                    process_character_directory(script_dir, champ.id, skin.id, self.apiVersion)
-                    self.cdnMap.update_cdn_entry(champ.id,skin.id,self.apiVersion)
+                    if limit>0:
+                        download_skin(champ.id, skin.id)
+                        process_character_directory(script_dir, champ.id, skin.id, self.apiVersion)
+                        self.cdnMap.update_cdn_entry(champ.id,skin.id,self.apiVersion)
+                        limit-=1
+                    else:break
                 break  # Stop after processing one champion
         self.cdnMap.save_skinSet()
 

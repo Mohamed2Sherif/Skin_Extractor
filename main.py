@@ -76,9 +76,7 @@ async def background_update_process():
                 update_manager = UpdateManager(db)
                 update_manager.pull_changes_from_riot_api()
                 update_manager.start_updating_cdn()
-                db.commit()
             except Exception as db_error:
-                db.rollback()
                 logger.error(f"Database operation failed: {db_error}")
                 raise
 

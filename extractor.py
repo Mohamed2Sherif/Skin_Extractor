@@ -35,7 +35,6 @@ def run_ritobin(scriptdir: str, filename: str, output_extension: str):
         exe = executer()
         if exe:
             cmd.insert(0, exe)
-        print(cmd)
         subprocess.run(cmd, check=True, text=True)
     except subprocess.CalledProcessError as e:
         logger.error(f"Error running ritobin: {e}")
@@ -153,7 +152,7 @@ def process_character_directory(scriptdir: str, champion_key: str, skin_number: 
     ]
     args_list = [(scriptdir, champion_key, folder, skin_number) for folder in skin_folders]
 
-    with ThreadPoolExecutor(max_workers=4) as executor:
+    with ThreadPoolExecutor(max_workers=2) as executor:
         executor.map(process_skin_folder_wrapper, args_list)
     archive_source = os.path.join(
         scriptdir,
@@ -217,7 +216,6 @@ def write_to_server_cdn(base_dir: str, dir: str, champKey: str, skinNum: str):
     exe = executer()
     if exe:
         cmd.insert(0, exe)
-    print(cmd)
     try:
         subprocess.run(cmd, check=True, text=True)
     except subprocess.CalledProcessError as e:

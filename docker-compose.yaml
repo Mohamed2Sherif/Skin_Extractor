@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   api:
-    image: test_image
+    image: exalted_api
     ports:
       - "8000:8000"
     configs:
