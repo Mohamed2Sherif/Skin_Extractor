@@ -4,26 +4,19 @@ import logging
 import subprocess
 
 from sqlmodel import Session
-
 from UpdateManager import UpdateManager, HashUpdateManager
-
 logger = logging.getLogger(__name__)
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.responses import FileResponse
 from extractor import process_skin_folder, process_character_directory, get_script_dir
 from models.models import create_db_and_tables, SessionDep, seed_database, getApiVersion, engine
 from skin_file_fetcher import download_skin
-
-app = FastAPI()
-
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
-
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
-app = FastAPI()
 scheduler = AsyncIOScheduler()
 
 
