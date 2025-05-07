@@ -1,6 +1,7 @@
 import asyncio
 import os
 import logging
+import subprocess
 
 from sqlmodel import Session
 
@@ -25,7 +26,6 @@ from contextlib import asynccontextmanager
 app = FastAPI()
 scheduler = AsyncIOScheduler()
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
     create_db_and_tables()
     logger.info("Starting database seeding")
     seed_database()
-
+    subprocess.Popen(["wineserver", "-p"])
     # Configure scheduler with persistent jobstore
     jobstores = {
         'default': SQLAlchemyJobStore(
@@ -55,6 +55,7 @@ async def lifespan(app: FastAPI):
 
     # Start scheduler
     scheduler.start()
+    subprocess.run(["wineserver", "-k"])
     logger.info("Scheduler started with persistent job storage")
 
     yield
