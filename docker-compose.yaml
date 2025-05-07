@@ -6,7 +6,9 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - skin_registry:/app/cache.bin
+      - type: bind
+        source: ./cache.bin
+        target: /app/cache.bin
       - cdn:/app/cdn/
     configs:
       - source: envfile
@@ -18,5 +20,4 @@ configs:
     file: ./.env.production
 
 volumes:
-  skin_registry:
   cdn:
