@@ -2,9 +2,9 @@ import datetime
 import os
 import pickle
 from typing import Dict, Tuple
-
+import requests
 from sqlalchemy.orm import selectinload
-
+from bs4 import BeautifulSoup
 from extractor import process_character_directory, get_script_dir
 from models.models import getApiVersion, seed_database, Champion
 from sqlmodel import Session, select
@@ -38,8 +38,10 @@ class UpdateManager:
         self.cdnMap = CDNSkinHashSet()
         self.db = session
         self.apiVersion = getApiVersion()[:-2]
+
     def pull_changes_from_riot_api(self):
         seed_database()
+
     def start_updating_cdn(self):
         self.Champions_list = self.db.exec(select(Champion).options(selectinload(Champion.skins))).all()
         map = self.cdnMap.get_skinSet()
@@ -54,21 +56,40 @@ class UpdateManager:
                 )
             ]
 
-            limit=10
+            limit = 10
             if unprocessed_skins:
                 # Process all skins for this champion
                 for skin in unprocessed_skins:
-                    if limit>0:
+                    if limit > 0:
                         download_skin(champ.id, skin.id)
                         process_character_directory(script_dir, champ.id, skin.id, self.apiVersion)
-                        self.cdnMap.update_cdn_entry(champ.id,skin.id,self.apiVersion)
-                        limit-=1
-                    else:break
+                        self.cdnMap.update_cdn_entry(champ.id, skin.id, self.apiVersion)
+                        limit -= 1
+                    else:
+                        break
                 break  # Stop after processing one champion
         self.cdnMap.save_skinSet()
 
 
+class HashUpdateManager:
+    def __init__(self):
+        self.url = "https://raw.communitydragon.org/data/hashes/lol/"
 
+    def update_hashes(self):
+        response = requests.get(self.url)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.text, "html.parser")
+        hashes_list = ["https://raw.communitydragon.org/data/hashes/lol/" + link.get('href') for link in soup.find_all('a') if
+                       link.get('href') and not any(filter_word in link.get('href').lower() for filter_word in ["../"])]
+        for hash_file_link in hashes_list:
+            file_response = requests.get(hash_file_link)
+            file_response.raise_for_status()
+            file_name = hash_file_link.split("/")[-1]
+            if not os.path.exists("hashes"):
+                os.mkdir("hashes")
+            with open(os.path.join("hashes", file_name), 'w') as hash_file:
+                hash_file.write(file_response.text)
 
 
 

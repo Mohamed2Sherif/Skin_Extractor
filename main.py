@@ -5,7 +5,7 @@ import subprocess
 
 from sqlmodel import Session
 
-from UpdateManager import UpdateManager
+from UpdateManager import UpdateManager, HashUpdateManager
 
 logger = logging.getLogger(__name__)
 from fastapi import FastAPI, BackgroundTasks
@@ -26,6 +26,7 @@ from contextlib import asynccontextmanager
 app = FastAPI()
 scheduler = AsyncIOScheduler()
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
@@ -33,11 +34,13 @@ async def lifespan(app: FastAPI):
     create_db_and_tables()
     logger.info("Starting database seeding")
     seed_database()
-    subprocess.Popen(["wineserver", "-p"])
+    if os.environ.get("Environment") != "Development":
+        subprocess.Popen(["wineserver", "-p"])
+    await background_hashes_update()
     # Configure scheduler with persistent jobstore
     jobstores = {
         'default': SQLAlchemyJobStore(
-            url= os.getenv("SCHEDULER_DATABASE_URL")
+            url=os.getenv("SCHEDULER_DATABASE_URL")
         )
     }
 
@@ -52,20 +55,38 @@ async def lifespan(app: FastAPI):
         replace_existing=True,  # Will replace existing job with same ID
         max_instances=1
     )
-
+    scheduler.add_job(
+        background_hashes_update,
+        trigger=IntervalTrigger(days=1),
+        id='daily_hashes_update',  # Unique ID for the job
+        replace_existing=True,  # Will replace existing job with same ID
+        max_instances=1
+    )
     # Start scheduler
     scheduler.start()
-    subprocess.run(["wineserver", "-k"])
     logger.info("Scheduler started with persistent job storage")
 
     yield
 
     # Shutdown
     scheduler.shutdown(wait=False)
+    if os.environ.get("Environment") != "Development":
+        subprocess.run(["wineserver", "-k"])
+
     logger.info("Scheduler stopped")
 
 
 app = FastAPI(lifespan=lifespan)
+
+
+async def background_hashes_update():
+    try:
+        logger.info("Starting scheduled Hashes update process...")
+
+        hash_updater = HashUpdateManager()
+        hash_updater.update_hashes()
+    except Exception as e:
+        logger.error(f"Error in Hashes update process: {e}")
 
 
 async def background_update_process():
