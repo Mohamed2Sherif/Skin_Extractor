@@ -47,7 +47,7 @@ async def lifespan(app: FastAPI):
     # Add the hourly job
     scheduler.add_job(
         background_update_process,
-        trigger=IntervalTrigger(minutes=1),
+        trigger=IntervalTrigger(minutes=4),
         id='hourly_api_update',  # Unique ID for the job
         replace_existing=True,  # Will replace existing job with same ID
         max_instances=1

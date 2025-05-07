@@ -5,6 +5,9 @@ services:
     image: exalted_api
     ports:
       - "8000:8000"
+    volumes:
+      - skin_registry:/app/cache.bin
+      - cdn:/app/cdn/
     configs:
       - source: envfile
         target: /app/.env
@@ -13,3 +16,7 @@ services:
 configs:
   envfile:
     file: ./.env.production
+
+volumes:
+  skin_registry:
+  cdn:

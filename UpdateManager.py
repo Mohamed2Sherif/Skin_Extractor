@@ -54,7 +54,7 @@ class UpdateManager:
                 )
             ]
 
-            limit=1
+            limit=10
             if unprocessed_skins:
                 # Process all skins for this champion
                 for skin in unprocessed_skins:
