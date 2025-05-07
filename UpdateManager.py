@@ -69,27 +69,34 @@ class UpdateManager:
                         break
                 break  # Stop after processing one champion
         self.cdnMap.save_skinSet()
-
-
 class HashUpdateManager:
     def __init__(self):
         self.url = "https://raw.communitydragon.org/data/hashes/lol/"
 
     def update_hashes(self):
-        response = requests.get(self.url)
-        response.raise_for_status()
+        # Stream the HTML response to avoid buffering large content in memory
+        with requests.get(self.url) as response:
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, "html.parser")  # use raw stream
 
-        soup = BeautifulSoup(response.text, "html.parser")
-        hashes_list = ["https://raw.communitydragon.org/data/hashes/lol/" + link.get('href') for link in soup.find_all('a') if
-                       link.get('href') and not any(filter_word in link.get('href').lower() for filter_word in ["../"])]
+        script_dir = get_script_dir()
+        hashes_dir = os.path.join(script_dir, "hashes")
+        os.makedirs(hashes_dir, exist_ok=True)
+
+        hashes_list = [
+            self.url + link.get('href')
+            for link in soup.find_all('a')
+            if link.get('href') and not link.get('href').startswith("..")
+        ]
+
         for hash_file_link in hashes_list:
-            file_response = requests.get(hash_file_link)
-            file_response.raise_for_status()
             file_name = hash_file_link.split("/")[-1]
-            if not os.path.exists("hashes"):
-                os.mkdir("hashes")
-            with open(os.path.join("hashes", file_name), 'w') as hash_file:
-                hash_file.write(file_response.text)
+            dest_path = os.path.join(hashes_dir, file_name)
 
+            with requests.get(hash_file_link, stream=True) as file_response:
+                file_response.raise_for_status()
 
-
+                with open(dest_path, 'w') as hash_file:
+                    for chunk in file_response.iter_content(chunk_size=8192):
+                        if chunk:
+                            hash_file.write(chunk.decode("utf-8"))

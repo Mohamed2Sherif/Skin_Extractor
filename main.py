@@ -51,7 +51,6 @@ async def lifespan(app: FastAPI):
         replace_existing=True,  # Will replace existing job with same ID
         max_instances=1,
         next_run_time=datetime.now()
-
     )
     # Start scheduler
     scheduler.start()
@@ -65,9 +64,6 @@ async def lifespan(app: FastAPI):
         subprocess.run(["wineserver", "-k"])
 
     logger.info("Scheduler stopped")
-
-
-app = FastAPI(lifespan=lifespan)
 
 
 async def background_hashes_update():
@@ -98,7 +94,7 @@ async def background_update_process():
     except Exception as e:
         logger.error(f"Error in update process: {e}")
         # The scheduler will retry at next interval
-
+app = FastAPI(lifespan=lifespan)
 
 @app.get("/health")
 async def root():
