@@ -1,4 +1,3 @@
-import asyncio
 import os
 import logging
 import subprocess
@@ -6,10 +5,9 @@ import subprocess
 from sqlmodel import Session
 from UpdateManager import UpdateManager, HashUpdateManager
 logger = logging.getLogger(__name__)
-from fastapi import FastAPI, BackgroundTasks
 from fastapi.responses import FileResponse
-from extractor import process_skin_folder, process_character_directory, get_script_dir
-from models.models import create_db_and_tables, SessionDep, seed_database, getApiVersion, engine
+from extractor import  process_character_directory, get_script_dir
+from models.models import create_db_and_tables, seed_database, getApiVersion, engine
 from skin_file_fetcher import download_skin
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
@@ -77,7 +75,7 @@ async def background_hashes_update():
         logger.info("Starting scheduled Hashes update process...")
 
         hash_updater = HashUpdateManager()
-        hash_updater.update_hashes()
+        await hash_updater.update_hashes()
     except Exception as e:
         logger.error(f"Error in Hashes update process: {e}")
 
