@@ -2,7 +2,6 @@ import logging
 import os
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
-
 logger = logging.getLogger(__name__)
 import json
 import shutil
@@ -35,7 +34,12 @@ def run_ritobin(scriptdir: str, filename: str, output_extension: str):
         exe = executer()
         if exe:
             cmd.insert(0, exe)
-        subprocess.run(cmd, check=True, text=True)
+        subprocess.run(cmd, check=True, text=True,timeout=30.0)
+    except subprocess.TimeoutExpired as e :
+        if e.process:
+            e.process.kill()  # Proper cleanup
+            e.process.wait()  # Prevent zombies
+        raise RuntimeError(f"Process timed out: {e.args}") from e
     except subprocess.CalledProcessError as e:
         logger.error(f"Error running ritobin: {e}")
         raise
@@ -86,15 +90,15 @@ def process_skin_folder(scriptdir: str, championkey: str, folder_path: str, skin
         try:
             run_ritobin(scriptdir, os.path.join(folder_path, f"skin{base_skin}.bin")
                         , "json")
-            shutil.copy(os.path.join(folder_path,f"skin{base_skin}.json"), os.path.join(folder_path,"skinbase.json"))
+            shutil.copy(os.path.join(folder_path, f"skin{base_skin}.json"), os.path.join(folder_path, "skinbase.json"))
         except subprocess.CalledProcessError as e:
             logger.error(f"Error processing base skin: {e}")
             return
     # Load base data
     base_data = (
-        read_json_file(os.path.join(folder_path,"skinbase"))
-        if os.path.exists(os.path.join(folder_path,"skinbase.json"))
-        else read_json_file(os.path.join(folder_path,f"skin{base_skin}"))
+        read_json_file(os.path.join(folder_path, "skinbase"))
+        if os.path.exists(os.path.join(folder_path, "skinbase.json"))
+        else read_json_file(os.path.join(folder_path, f"skin{base_skin}"))
     )
     base_skin_title = base_data["entries"]["value"]["items"][0]["key"]
     base_skin_resources = get_resource_resolver(base_data)
@@ -102,11 +106,11 @@ def process_skin_folder(scriptdir: str, championkey: str, folder_path: str, skin
 
     try:
         logger.info(f"Processing {os.path.basename(os.getcwd())}/{skin_number}...")
-        if os.path.exists(os.path.join(folder_path,f"skin{skin_number}.bin")):
-            run_ritobin(scriptdir, os.path.join(folder_path,f"skin{skin_number}.bin"), "json")
+        if os.path.exists(os.path.join(folder_path, f"skin{skin_number}.bin")):
+            run_ritobin(scriptdir, os.path.join(folder_path, f"skin{skin_number}.bin"), "json")
 
             # Load and modify skin data
-            json_file = os.path.join(folder_path,f"skin{skin_number}.json")
+            json_file = os.path.join(folder_path, f"skin{skin_number}.json")
             if os.path.exists(json_file):
                 skin_data = read_json_file(json_file[:-5])  # Remove .json extension
                 skin_data["entries"]["value"]["items"][0]["key"] = base_skin_title
@@ -121,14 +125,14 @@ def process_skin_folder(scriptdir: str, championkey: str, folder_path: str, skin
                                 obj["key"] = base_skin_resources
 
                 # Write modified data to base skin and convert back to bin
-                write_json_file(os.path.join(folder_path,f"skin{base_skin}"), skin_data)
-                run_ritobin(scriptdir, os.path.join(folder_path,f"skin{base_skin}.json"), "bin")
+                write_json_file(os.path.join(folder_path, f"skin{base_skin}"), skin_data)
+                run_ritobin(scriptdir, os.path.join(folder_path, f"skin{base_skin}.json"), "bin")
                 os.remove(json_file)
-                os.remove(os.path.join(folder_path,"skin0.json"))
+                os.remove(os.path.join(folder_path, "skin0.json"))
                 parent_dir_name = os.path.basename(folder_path)
 
         write_modified_skin_to_output_dir(
-            scriptdir, championkey, parent_dir_name, original_skin_number,folder_path
+            scriptdir, championkey, parent_dir_name, original_skin_number, folder_path
         )
         # Clean up temporary files
 
@@ -168,7 +172,7 @@ def process_character_directory(scriptdir: str, champion_key: str, skin_number: 
     write_to_server_cdn(scriptdir, archive_source, champion_key, skin_number)
 
 
-def write_modified_skin_to_output_dir(scriptdir: str, champ_key: str, champ_name: str, skin_num: str,folder_path:str):
+def write_modified_skin_to_output_dir(scriptdir: str, champ_key: str, champ_name: str, skin_num: str, folder_path: str):
     try:
         output_dir = os.path.join(
             scriptdir,
@@ -217,7 +221,12 @@ def write_to_server_cdn(base_dir: str, dir: str, champKey: str, skinNum: str):
     if exe:
         cmd.insert(0, exe)
     try:
-        subprocess.run(cmd, check=True, text=True)
+        subprocess.run(cmd, check=True, text=True,timeout=30.0)
+    except subprocess.TimeoutExpired as e :
+        if e.process:
+            e.process.kill()  # Proper cleanup
+            e.process.wait()  # Prevent zombies
+        raise RuntimeError(f"Process timed out: {e.args}") from e
     except subprocess.CalledProcessError as e:
         logger.error(f"Error running wad-make: {e}")
         raise
