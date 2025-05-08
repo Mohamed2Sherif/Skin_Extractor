@@ -27,23 +27,33 @@ def executer() -> str:
     else:
         return "wine"
 
+def run_process(cmd: List[str], timeout: float = 30.0):
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        stdout, stderr = proc.communicate(timeout=timeout)
+        if proc.returncode != 0:
+            raise subprocess.CalledProcessError(proc.returncode, cmd, output=stdout, stderr=stderr)
+        return stdout
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            logger.warning(f"Force killing process {cmd}")
+            proc.kill()
+            proc.wait()
+        raise RuntimeError(f"Process timed out: {cmd}")
+    except Exception as e:
+        proc.kill()
+        proc.wait()
+        raise e
 
 def run_ritobin(scriptdir: str, filename: str, output_extension: str):
-    try:
-        cmd = [os.path.join(scriptdir, "ritobin.exe"), filename, "-o", output_extension]
-
-        exe = executer()
-        if exe:
-            cmd.insert(0, exe)
-        subprocess.run(cmd, check=True, text=True,timeout=30.0)
-    except subprocess.TimeoutExpired as e :
-        if e.process:
-            e.process.kill()  # Proper cleanup
-            e.process.wait()  # Prevent zombies
-        raise RuntimeError(f"Process timed out: {e.args}") from e
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Error running ritobin: {e}")
-        raise
+    cmd = [os.path.join(scriptdir, "ritobin.exe"), filename, "-o", output_extension]
+    exe = executer()
+    if exe:
+        cmd.insert(0, exe)
+    run_process(cmd)
 
 
 def read_json_file(filename: str) -> Dict[str, Any]:
@@ -226,13 +236,4 @@ def write_to_server_cdn(base_dir: str, dir: str, champKey: str, skinNum: str):
     exe = executer()
     if exe:
         cmd.insert(0, exe)
-    try:
-        subprocess.run(cmd, check=True, text=True,timeout=30.0)
-    except subprocess.TimeoutExpired as e :
-        if e.process:
-            e.process.kill()  # Proper cleanup
-            e.process.wait()  # Prevent zombies
-        raise RuntimeError(f"Process timed out: {e.args}") from e
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Error running wad-make: {e}")
-        raise
+    run_process(cmd)
