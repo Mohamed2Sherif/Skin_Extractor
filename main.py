@@ -29,6 +29,7 @@ async def lifespan(app: FastAPI):
     # Startup
     if not os.environ.get("Environment") == "Development":
         wineserver_proc = subprocess.Popen(["wineserver", "-p"])
+        wineserver_proc.wait()
         logger.info("Started persistent wineserver")
     # Configure scheduler with persistent jobstore
     jobstores = {
@@ -68,7 +69,7 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     scheduler.shutdown(wait=False)
-    if wineserver_proc:
+    if wineserver_proc is not None:
         try:
             wineserver_proc.terminate()  # Graceful shutdown
             wineserver_proc.wait(timeout=5)  # Wait for cleanup

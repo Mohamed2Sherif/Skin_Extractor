@@ -9,6 +9,7 @@ from sys import api_version
 from typing import Dict, Any, Optional, List
 from models.models import getApiVersion
 from dotenv import load_dotenv
+from concurrent.futures import as_completed
 
 load_dotenv("./.env")
 api_version = getApiVersion()
@@ -157,7 +158,12 @@ def process_character_directory(scriptdir: str, champion_key: str, skin_number: 
     args_list = [(scriptdir, champion_key, folder, skin_number) for folder in skin_folders]
 
     with ThreadPoolExecutor(max_workers=2) as executor:
-        executor.map(process_skin_folder_wrapper, args_list)
+        futures = [executor.submit(process_skin_folder_wrapper, args) for args in args_list]
+        for future in as_completed(futures):
+            try:
+                future.result()
+            except Exception as e:
+                logger.error(f"Error in processing skin folder: {e}")
     archive_source = os.path.join(
         scriptdir,
         "output",
