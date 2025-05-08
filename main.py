@@ -17,6 +17,8 @@ from contextlib import asynccontextmanager
 
 logger = logging.getLogger(__name__)
 
+wineserver_proc = None
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
@@ -24,8 +26,10 @@ async def lifespan(app: FastAPI):
     create_db_and_tables()
     logger.info("Starting database seeding")
     seed_database()
+    # Startup
     if not os.environ.get("Environment") == "Development":
-        subprocess.Popen(["wineserver", "-p"])
+        wineserver_proc = subprocess.Popen(["wineserver", "-p"])
+        logger.info("Started persistent wineserver")
     # Configure scheduler with persistent jobstore
     jobstores = {
         'default': SQLAlchemyJobStore(
@@ -34,7 +38,11 @@ async def lifespan(app: FastAPI):
     }
 
     # Create scheduler with jobstore configuration
-    scheduler = AsyncIOScheduler(jobstores=jobstores)
+    scheduler = AsyncIOScheduler(jobstores=jobstores, job_defaults={
+        "coalesce": True,  # Merge missed runs
+        "max_instances": 1,
+        "misfire_grace_time": 60  # Allow 60s delay for stuck jobs
+    })
 
     # Add the hourly job
     scheduler.add_job(
@@ -60,8 +68,13 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     scheduler.shutdown(wait=False)
-    if not os.environ.get("Environment") == "Development":
-        subprocess.run(["wineserver", "-k"])
+    if wineserver_proc:
+        try:
+            wineserver_proc.terminate()  # Graceful shutdown
+            wineserver_proc.wait(timeout=5)  # Wait for cleanup
+        except subprocess.TimeoutExpired:
+            wineserver_proc.kill()  # Force kill if stuck
+            wineserver_proc.wait()
 
     logger.info("Scheduler stopped")
 
@@ -94,7 +107,10 @@ async def background_update_process():
     except Exception as e:
         logger.error(f"Error in update process: {e}")
         # The scheduler will retry at next interval
+
+
 app = FastAPI(lifespan=lifespan)
+
 
 @app.get("/health")
 async def root():
