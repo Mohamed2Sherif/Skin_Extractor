@@ -64,7 +64,7 @@ class UpdateManager:
                         download_skin(champ.id, skin.id)
                         process_character_directory(script_dir, champ.id, skin.id, self.apiVersion)
                         self.cdnMap.update_cdn_entry(champ.id, skin.id, self.apiVersion)
-                        limit -= 1
+                        # limit -= 1
                     else:
                         break
                 break  # Stop after processing one champion

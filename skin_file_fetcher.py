@@ -34,24 +34,27 @@ def get_filtered_community_dragon_links(api_version: str) -> List[str]:
     ]
 
 
+def write_to_disk(skin_url: str, skin_dir: str, skinNum: str, max_retries: int = 3):
+    urls_to_try = [
+        skin_url,  # Original URL first
+        skin_url.replace(f"skin{skinNum}", "skin0")  # Fallback URL
+    ]
 
-def write_to_disk(skin_url:str,skin_dir:str,skinNum:str):
-    try:
-        # Download the skin file
-        response = requests.get(skin_url)
-        response.raise_for_status()
+    for attempt, url in enumerate(urls_to_try):
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
 
-        # Save to disk
-        with open(skin_dir, 'wb') as f:
-            f.write(response.content)
+            with open(skin_dir, 'wb') as f:
+                f.write(response.content)
+            return  # Success!
 
-    except requests.exceptions.RequestException as e:
-        try :
-            write_to_disk(skin_url.replace(f"skin{skinNum}","skin0"),skin_dir,skinNum)
-        except :
-            logger.error(f"Failed to fetch skin data: {str(e)}")
-    except IOError as e:
-        logger.error(f"Failed to save file: {str(e)}")
+        except (requests.exceptions.RequestException, IOError) as e:
+            if attempt == len(urls_to_try) - 1:  # Last attempt failed
+                logger.error(f"Final attempt failed for {url}: {str(e)}")
+                return
+            logger.warning(f"Attempt {attempt + 1} failed, retrying...")
+
 def save_skin_to_disk(champ_id: str, skin_num: str, api_version: str, champ_dir: str) -> None:
     """Download and save skin file to organized directory structure"""
     # Create base directory if it doesn't exist

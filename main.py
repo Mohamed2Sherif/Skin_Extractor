@@ -47,10 +47,12 @@ async def lifespan(app: FastAPI):
     # Add the hourly job
     scheduler.add_job(
         background_update_process,
-        trigger=IntervalTrigger(minutes=4),
+        trigger=IntervalTrigger(days=4),
         id='hourly_api_update',  # Unique ID for the job
         replace_existing=True,  # Will replace existing job with same ID
-        max_instances=1
+        max_instances=1,
+        next_run_time=datetime.now()
+
     )
     scheduler.add_job(
         background_hashes_update,
@@ -58,7 +60,7 @@ async def lifespan(app: FastAPI):
         id='daily_hashes_update',  # Unique ID for the job
         replace_existing=True,  # Will replace existing job with same ID
         max_instances=1,
-        next_run_time=datetime.now()
+        # next_run_time=datetime.now()
     )
     # Start scheduler
     scheduler.start()

@@ -31,10 +31,7 @@ def run_process(cmd: List[str], timeout: float = 60.0):
     try:
         result = subprocess.run(
             cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
             text=True,
-            timeout=timeout,
             check=True
         )
         return result.stdout
@@ -161,7 +158,7 @@ def process_character_directory(scriptdir: str, champion_key: str, skin_number: 
     ]
     args_list = [(scriptdir, champion_key, folder, skin_number) for folder in skin_folders]
 
-    with ThreadPoolExecutor(max_workers=2) as executor:
+    with ThreadPoolExecutor(max_workers=4) as executor:
         futures = [executor.submit(process_skin_folder_wrapper, args) for args in args_list]
         for future in as_completed(futures):
             try:
