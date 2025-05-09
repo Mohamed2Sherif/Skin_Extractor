@@ -3,6 +3,7 @@ version: "3.9"
 services:
   api:
     image: exalted_api
+    init: true
     ports:
       - "8000:8000"
     volumes:
