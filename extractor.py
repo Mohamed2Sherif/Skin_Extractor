@@ -27,27 +27,21 @@ def executer() -> str:
     else:
         return "wine"
 
-def run_process(cmd: List[str], timeout: float = 30.0):
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+def run_process(cmd: List[str], timeout: float = 60.0):
     try:
-        stdout, stderr = proc.communicate(timeout=timeout)
-        if proc.returncode != 0:
-            raise subprocess.CalledProcessError(proc.returncode, cmd, output=stdout, stderr=stderr)
-        return stdout
+        result = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=timeout,
+            check=True
+        )
+        return result.stdout
     except subprocess.TimeoutExpired:
-        proc.kill()
-        try:
-            proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            logger.warning(f"Force killing process {cmd}")
-            proc.kill()
-            proc.wait()
         raise RuntimeError(f"Process timed out: {cmd}")
-    except Exception as e:
-        proc.kill()
-        proc.wait()
+    except subprocess.CalledProcessError as e:
         raise e
-
 def run_ritobin(scriptdir: str, filename: str, output_extension: str):
     cmd = [os.path.join(scriptdir, "ritobin.exe"), filename, "-o", output_extension]
     exe = executer()
