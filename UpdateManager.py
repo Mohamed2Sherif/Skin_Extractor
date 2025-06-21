@@ -73,6 +73,7 @@ class UpdateManager:
     #     self.cdnMap.save_skinSet()
     async def start_updating_cdn(self):
         await main()  # Run the async check first
+        map = self.cdnMap.get_skinSet()
 
         script_dir = get_script_dir()
           # Use a proper session context
