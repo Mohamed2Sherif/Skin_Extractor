@@ -43,25 +43,25 @@ async def lifespan(app: FastAPI):
         "max_instances": 1,
         "misfire_grace_time": 60  # Allow 60s delay for stuck jobs
     })
-
-    # Add the hourly job
-    scheduler.add_job(
-        background_update_process,
-        trigger=IntervalTrigger(days=4),
-        id='hourly_api_update',  # Unique ID for the job
-        replace_existing=True,  # Will replace existing job with same ID
-        max_instances=1,
-        next_run_time=datetime.now()
-
-    )
     scheduler.add_job(
         background_hashes_update,
         trigger=IntervalTrigger(days=1),
         id='daily_hashes_update',  # Unique ID for the job
         replace_existing=True,  # Will replace existing job with same ID
         max_instances=1,
-        # next_run_time=datetime.now()
+        next_run_time=datetime.now()
     )
+    # Add the hourly job
+    scheduler.add_job(
+        background_update_process,
+        trigger=IntervalTrigger(hours=1),
+        id='hourly_api_update',  # Unique ID for the job
+        replace_existing=True,  # Will replace existing job with same ID
+        max_instances=1,
+        next_run_time=datetime.now()
+
+    )
+
     # Start scheduler
     scheduler.start()
     logger.info("Scheduler started with persistent job storage")
@@ -100,7 +100,7 @@ async def background_update_process():
             try:
                 update_manager = UpdateManager(db)
                 update_manager.pull_changes_from_riot_api()
-                update_manager.start_updating_cdn()
+                await update_manager.start_updating_cdn()
             except Exception as db_error:
                 logger.error(f"Database operation failed: {db_error}")
                 raise

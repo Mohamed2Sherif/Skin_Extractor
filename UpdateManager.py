@@ -1,6 +1,8 @@
 import datetime
 import os
 import pickle
+import asyncio
+from test_skin_exist import main,bugged_skins
 from typing import Dict, Tuple
 import requests
 from sqlalchemy.orm import selectinload
@@ -8,8 +10,10 @@ from bs4 import BeautifulSoup
 from extractor import process_character_directory, get_script_dir
 from models.models import getApiVersion, seed_database, Champion
 from sqlmodel import Session, select
-
+import logging
+logger = logging.getLogger(__name__)
 from skin_file_fetcher import download_skin
+import concurrent.futures
 
 
 class CDNSkinHashSet:
@@ -42,33 +46,65 @@ class UpdateManager:
     def pull_changes_from_riot_api(self):
         seed_database()
 
-    def start_updating_cdn(self):
-        self.Champions_list = self.db.exec(select(Champion).options(selectinload(Champion.skins))).all()
-        map = self.cdnMap.get_skinSet()
+    # def start_updating_cdn(self):
+    #     self.Champions_list = self.db.exec(select(Champion).options(selectinload(Champion.skins))).all()
+    #     map = self.cdnMap.get_skinSet()
+    #     script_dir = get_script_dir()
+    #     pool = concurrent.futures.ThreadPoolExecutor(max_workers=8)
+    #     for champ in self.Champions_list:
+    #         # Check if at least one skin is unprocessed
+    #         unprocessed_skins = [
+    #             skin for skin in champ.skins
+    #             if skin.id != "0" and (
+    #                     (entry := map.get(f"{champ.id}_{skin.id}")) is None or entry[0] != self.apiVersion
+    #             )
+    #         ]
+    #
+    #         limit = 10
+    #         if unprocessed_skins:
+    #             # Process all skins for this champion
+    #             for skin in unprocessed_skins:
+    #                 if limit > 0:
+    #                     pool.submit(self.extract_remote_skin,champ, script_dir, skin)
+    #                     # limit -= 1 #comment this if you want to update all the files
+    #                 else:
+    #                     break
+    #             #break  # Stop after processing one champion
+    #     self.cdnMap.save_skinSet()
+    async def start_updating_cdn(self):
+        await main()  # Run the async check first
+
         script_dir = get_script_dir()
+          # Use a proper session context
+        print(bugged_skins)
+        for champ_name, skin_name in bugged_skins:
+                # Get champion with skins eagerly loaded
+                print(champ_name)
+                champion =self.db.exec(
+                    select(Champion)
+                    .where(Champion.champ_name == champ_name)
+                    .options(selectinload(Champion.skins))
+                ).first()
 
-        for champ in self.Champions_list:
-            # Check if at least one skin is unprocessed
-            unprocessed_skins = [
-                skin for skin in champ.skins
-                if skin.id != "0" and (
-                        (entry := map.get(f"{champ.id}_{skin.id}")) is None or entry[0] != self.apiVersion
-                )
-            ]
-
-            limit = 10
-            if unprocessed_skins:
-                # Process all skins for this champion
-                for skin in unprocessed_skins:
-                    if limit > 0:
-                        download_skin(champ.id, skin.id)
-                        process_character_directory(script_dir, champ.id, skin.id, self.apiVersion)
-                        self.cdnMap.update_cdn_entry(champ.id, skin.id, self.apiVersion)
-                        # limit -= 1
+                if champion:
+                    for skin_record in champion.skins:
+                        if skin_record.skin_name == skin_name and(
+                                            (entry := map.get(f"{champion.id}_{skin_record.id}")) is None or entry[0] != self.apiVersion
+                                            ):  # Fixed comparison
+                            self.extract_remote_skin(champion,script_dir,skin_record)
+                            break
                     else:
-                        break
-                break  # Stop after processing one champion
+                        logger.warning(f"Skin not found: {champ_name} - {skin_name}")
+                else:
+                    logger.warning(f"Champion not found: {champ_name}")
         self.cdnMap.save_skinSet()
+
+    def extract_remote_skin(self, champ, script_dir, skin):
+        download_skin(champ.id, skin.id)
+        process_character_directory(script_dir, champ.id, skin.id, self.apiVersion)
+        self.cdnMap.update_cdn_entry(champ.id, skin.id, self.apiVersion)
+
+
 class HashUpdateManager:
     def __init__(self):
         self.url = "https://raw.communitydragon.org/data/hashes/lol/"
