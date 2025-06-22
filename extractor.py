@@ -4,8 +4,6 @@ import subprocess
 from concurrent.futures import ThreadPoolExecutor
 logger = logging.getLogger(__name__)
 import json
-import portalocker
-
 import shutil
 from sys import api_version
 from typing import Dict, Any, Optional, List
@@ -41,8 +39,8 @@ def run_process(cmd: List[str], timeout: float = 60.0):
         raise RuntimeError(f"Process timed out: {cmd}")
     except subprocess.CalledProcessError as e:
         raise e
-def run_ritobin(scriptdir: str, filename: str, output_extension: str,outputfileName:str=""):
-    cmd = [os.path.join(scriptdir, "ritobin.exe"), filename,outputfileName, "-o", output_extension]
+def run_ritobin(scriptdir: str, filename: str, output_extension: str):
+    cmd = [os.path.join(scriptdir, "ritobin.exe"), filename, "-o", output_extension]
     exe = executer()
     if exe:
         cmd.insert(0, exe)
@@ -50,16 +48,11 @@ def run_ritobin(scriptdir: str, filename: str, output_extension: str,outputfileN
 
 
 def read_json_file(filename: str) -> Dict[str, Any]:
-    """Cross-platform JSON reading with shared lock."""
-    filepath = f"{filename}.json"
+    """Read and parse a JSON file."""
     try:
-        with open(filepath, "r") as file:
-            portalocker.lock(file, portalocker.LOCK_SH)  # Shared lock
-            try:
-                return json.load(file)
-            finally:
-                portalocker.unlock(file)
-    except (FileNotFoundError, json.JSONDecodeError, PermissionError) as e:
+        with open(f"{filename}.json", "r") as file:
+            return json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
         logger.error(f"Error reading JSON file: {e}")
         raise
 
@@ -134,9 +127,10 @@ def process_skin_folder(scriptdir: str, championkey: str, folder_path: str, skin
                                 obj["key"] = base_skin_resources
 
                 # Write modified data to base skin and convert back to bin
-                write_json_file(os.path.join(folder_path, f"skin{skin_number}"), skin_data)
-                run_ritobin(scriptdir, os.path.join(folder_path, f"skin{skin_number}.json"), "bin",f"skin0.bin")
+                write_json_file(os.path.join(folder_path, f"skin{base_skin}"), skin_data)
+                run_ritobin(scriptdir, os.path.join(folder_path, f"skin{base_skin}.json"), "bin")
                 os.remove(json_file)
+                os.remove(os.path.join(folder_path, "skin0.json"))
                 parent_dir_name = os.path.basename(folder_path)
 
         write_modified_skin_to_output_dir(
