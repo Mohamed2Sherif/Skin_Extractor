@@ -21,12 +21,16 @@ def get_script_dir():
     return script_dir
 
 
-def executer() -> str:
+def rito_bin_executer(script_dir:str) -> str:
     if os.environ.get("Environment") == "Development":
-        return ""
+        return os.path.join(script_dir,"ritobin.exe")
     else:
-        return "wine"
-
+        return os.path.join(script_dir,"linux_binaries","ritobin_cli")
+def wad_make_exectuor(script_dir:str) -> str:
+    if os.environ.get("Environment") == "Development":
+        return os.path.join(script_dir,"wad-make.exe")
+    else:
+        return os.path.join(script_dir,"linux_binaries","wad-make")
 def run_process(cmd: List[str], timeout: float = 60.0):
     try:
         result = subprocess.run(
@@ -40,8 +44,8 @@ def run_process(cmd: List[str], timeout: float = 60.0):
     except subprocess.CalledProcessError as e:
         raise e
 def run_ritobin(scriptdir: str, filename: str, output_extension: str):
-    cmd = [os.path.join(scriptdir, "ritobin.exe"), filename, "-o", output_extension]
-    exe = executer()
+    cmd = [filename, "-o", output_extension]
+    exe = rito_bin_executer(scriptdir)
     if exe:
         cmd.insert(0, exe)
     run_process(cmd)
@@ -220,11 +224,10 @@ def write_modified_skin_to_output_dir(scriptdir: str, champ_key: str, champ_name
 
 def write_to_server_cdn(base_dir: str, dir: str, champKey: str, skinNum: str):
     output_path = os.path.join(base_dir, "cdn", champKey, skinNum)
-    wadmake_path = os.path.join(base_dir, "wad-make.exe")
     output_file = f"{output_path}.wad.client"
 
-    cmd = [wadmake_path, dir, output_file]
-    exe = executer()
+    cmd = [dir, output_file]
+    exe = wad_make_exectuor(base_dir)
     if exe:
         cmd.insert(0, exe)
     run_process(cmd)

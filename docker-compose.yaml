@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   api:
-    image: exalted_api
+    image: cs_lol_binaries
     init: true
     ports:
       - "8000:8000"

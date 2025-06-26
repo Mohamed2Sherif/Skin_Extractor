@@ -17,7 +17,6 @@ from contextlib import asynccontextmanager
 
 logger = logging.getLogger(__name__)
 
-wineserver_proc = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -26,11 +25,6 @@ async def lifespan(app: FastAPI):
     create_db_and_tables()
     logger.info("Starting database seeding")
     seed_database()
-    # Startup
-    if not os.environ.get("Environment") == "Development":
-        wineserver_proc = subprocess.Popen(["wineserver", "-p"])
-        logger.info("Started persistent wineserver")
-    # Configure scheduler with persistent jobstore
     jobstores = {
         'default': SQLAlchemyJobStore(
             url=os.getenv("SCHEDULER_DATABASE_URL")
@@ -49,7 +43,7 @@ async def lifespan(app: FastAPI):
         id='daily_hashes_update',  # Unique ID for the job
         replace_existing=True,  # Will replace existing job with same ID
         max_instances=1,
-        next_run_time=datetime.now()
+        # next_run_time=datetime.now()
     )
     # Add the hourly job
     scheduler.add_job(
@@ -70,15 +64,6 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     scheduler.shutdown(wait=False)
-    if wineserver_proc is not None:
-        try:
-            subprocess.run(["wineserver","-k"])
-            wineserver_proc.terminate()  # Graceful shutdown
-            wineserver_proc.wait(timeout=5)  # Wait for cleanup
-        except subprocess.TimeoutExpired:
-            wineserver_proc.kill()  # Force kill if stuck
-            wineserver_proc.wait()
-
     logger.info("Scheduler stopped")
 
 
