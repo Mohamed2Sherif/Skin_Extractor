@@ -3,6 +3,10 @@ import logging
 import subprocess
 from datetime import datetime
 
+from livekit.api import AccessToken, VideoGrants
+from livekit.api import LiveKitAPI
+from livekit.api import ListParticipantsRequest
+
 from sqlmodel import Session
 from UpdateManager import UpdateManager, HashUpdateManager
 from fastapi.responses import FileResponse
@@ -130,6 +134,30 @@ async def get_skin(champId: str, skinId: str):
         )
 
 
-@app.get("party/accessToken/{rooomId}")
-async def join_party(roomId: str):
-    return "sdfsdf"
+
+@app.get("/party/accessToken/{room_id}/{identity}")
+async def generate_party_token(room_id: str, identity: str):
+    api_key = os.environ.get("LIVEKIT_API_KEY")
+    api_secret = os.environ.get("LIVEKIT_API_SECRET")
+
+    token = AccessToken(api_key=api_key, api_secret=api_secret)
+    token.with_identity(identity=identity).with_name(identity)
+    token.with_ttl(ttl="12h")
+    grant = VideoGrants(
+        room_join=True,
+        room=room_id,
+        can_publish=True,
+        can_subscribe=True,
+        can_publish_data=True,
+    )
+    token.with_grants(grant)
+    jwt = token.to_jwt()
+    return {"token": jwt}
+
+@app.get("/party/participants/{room_id}")
+async def get_participants(room_id: str):
+    async with LiveKitAPI() as lkapi:
+        res = await lkapi.room.list_participants(ListParticipantsRequest(
+            room=room_id
+        ))
+    return {"participants": [p.to_dict() for p in res]}
