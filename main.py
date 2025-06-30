@@ -142,7 +142,6 @@ async def generate_party_token(room_id: str, identity: str):
 
     token = AccessToken(api_key=api_key, api_secret=api_secret)
     token.with_identity(identity=identity).with_name(identity)
-    token.with_ttl(ttl="12h")
     grant = VideoGrants(
         room_join=True,
         room=room_id,
@@ -160,4 +159,10 @@ async def get_participants(room_id: str):
         res = await lkapi.room.list_participants(ListParticipantsRequest(
             room=room_id
         ))
-    return {"participants": [p.to_dict() for p in res]}
+        participants = [
+            {
+                "identity": p.identity,
+            }
+            for p in res.participants
+        ]
+        return {"participants": participants}
